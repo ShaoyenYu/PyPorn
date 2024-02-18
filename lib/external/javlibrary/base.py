@@ -13,6 +13,7 @@ __all__ = ["JavLibraryApi"]
 class JavLibraryApi(BaseApi):
     source = "JavLibrary"
     url_domain = "https://www.javlibrary.com"
+    _lang = "cn"
 
     patt_video_id = re.compile(r"\./\?v=(.*)")
 
@@ -75,16 +76,20 @@ class JavLibraryApi(BaseApi):
         root = etree.HTML(resp_video_detail.text)
         title = root.xpath(".//div[@id='video_title']//a[@rel='bookmark']/text()")[0]
 
-        video_infos = dict(zip(
-            ("serial_no", "publish_date", "length", "director", "maker", "publisher", "review", "category", "cast"),
-            root.xpath(".//div[@id='video_info']/div")
-        ))
-        serial_no = video_infos["serial_no"].xpath(".//td[@class='text']/text()")[0]
-        issue_date = video_infos["publish_date"].xpath(".//td[@class='text']/text()")[0]
-        length = video_infos["length"].xpath(".//span[@class='text']/text()")[0]
-        maker = video_infos["maker"].xpath(".//td[@class='text']/span/a/text()")[0].strip()
-        publisher = video_infos["publisher"].xpath(".//td[@class='text']/span/a/text()")[0]
-        casts = video_infos["cast"].xpath(".//td[@class='text']//span[@class='star']/a[@rel='tag']/text()")
+        et_video_infos = root.xpath("//div[@id='video_info']/div")
+        attrs = {}
+        for element in et_video_infos:
+            match (key := element.get("id")):
+                case "video_id" | "video_date":
+                    attrs[key] = element.xpath(".//td/text()")[1]
+                case "video_length":
+                    attrs[key] = element.xpath(".//td/span/text()")[0]
+                case "video_director":
+                    attrs[key] = element.xpath(".//td//text()")[1].strip("-")
+                case "video_maker" | "video_label":
+                    attrs[key] = element.xpath(".//td//a/text()")[0]
+                case "video_cast":
+                    attrs[key] = self.strip_all(element.xpath(".//td//a/text()"))
 
         url_thumbnail = root.xpath(".//img[@id='video_jacket_img']/@src")[0]
         if not url_thumbnail.startswith("https:"):
@@ -94,13 +99,14 @@ class JavLibraryApi(BaseApi):
         )) if with_thumbnail else None
 
         jav = JavInfo(
-            serial_no=serial_no,
+            serial_no=attrs["video_id"],
             title=title,
-            casts=sorted(casts),
-            publish_date=issue_date,
+            casts=sorted(attrs["video_cast"]),
+            publish_date=attrs["video_date"],
             thumbnail=thumbnail,
-            length=length,
-            maker=maker,
-            publisher=publisher
+            length=attrs["video_length"] * 60,
+            maker=attrs["video_maker"].upper(),
+            publisher=attrs["video_label"].upper(),
+            source=self.source,
         )
         return jav

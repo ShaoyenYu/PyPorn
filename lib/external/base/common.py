@@ -2,7 +2,7 @@ import datetime as dt
 import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Iterable
 
 import httpx
 from PIL.Image import Image
@@ -31,8 +31,10 @@ class JavInfo:
             maker: Optional[str] = "",
             publisher: Optional[str] = "",
             director: Optional[str] = "",
+            source: str = "",
     ):
         self.serial_no = serial_no
+        self._serial_no_reg = None
         self._title, self._title_original = None, title
         self.casts = casts
         self.publish_date = publish_date
@@ -41,6 +43,13 @@ class JavInfo:
         self.maker = maker
         self.publisher = publisher
         self.director = director
+        self.source = source
+
+    @property
+    def serial_no_reg(self):
+        if self._serial_no_reg is None:
+            self._serial_no_reg = SerialNoParser.parse_serial_no(self.serial_no)
+        return self._serial_no_reg
 
     @property
     def title(self) -> str:
@@ -53,16 +62,18 @@ class JavInfo:
 
     def __repr__(self):
         s = "\n".join((
+            f"Meta Source : {self.source}",
             f"Publish Date: {self.publish_date}",
-            f"Serial No   : {self.serial_no}",
+            f"Serial No   : {self.serial_no_reg}",
             f"Publisher   : {self.publisher}",
+            f"Maker       : {self.maker}",
             f"Title       : {self.title}",
             f"Casts       : {self.casts}",
         ))
-        return s
+        return f"{s}\n"
 
     def __str__(self):
-        return f"{self.publish_date} {self.serial_no} {self.title} ({'&'.join(self.casts)})"
+        return f"{self.publish_date} {self.serial_no_reg} {self.title} ({'&'.join(self.casts)})"
 
 
 class BaseApi(ABC):
@@ -87,7 +98,7 @@ class BaseApi(ABC):
         return f"{self.url_domain}/{self.lang}"
 
     @staticmethod
-    def strip_all(strings: List[str], drop_empty_str=False) -> List[str]:
+    def strip_all(strings: Iterable[str], drop_empty_str=False) -> List[str]:
         if drop_empty_str:
             return [x_strip for x in strings if (x_strip := x.strip()) != ""]
         return [x.strip() for x in strings]

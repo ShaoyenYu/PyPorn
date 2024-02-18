@@ -66,24 +66,34 @@ class TokyoLibApi(BaseApi):
         et = etree.HTML(resp.text)
         et_info = et.xpath("//div[@class='info']")[0]
 
-        serial_no, _, publish_date = self.strip_all(
-            et_info.xpath(".//div[@class='attributes']//dt/text()")[:3]
-        )
-        publisher, director, brand = self.strip_all(
-            et_info.xpath(".//div[@class='attributes']//dt/a/text()")[:3]
-        )
-        serial_no = serial_no.split()[0].upper()
-        casts = sorted(self.strip_all(et_info.xpath(".//a[@class='actress']/text()"), drop_empty_str=True))
+        et_attrs = et_info.xpath(".//div[@class='attributes']/dl")[0]
+        attrs = {}
+        for key, et_value in zip(et_attrs.xpath("./dd/text()"), et_attrs.xpath("./dt")):
+            if key.endswith("番号"):
+                attrs["serial_no"] = et_value.xpath("./text()")[0].split()[0].upper()
+            elif key.endswith("发行时间"):
+                attrs["publish_date"] = et_value.xpath("./text()")[0].split()[0].upper()
+            elif key.endswith("系列"):
+                attrs["serie"] = et_value.xpath(".//text()")[0].strip()
+            elif key.endswith("片商"):
+                attrs["maker"] = et_value.xpath(".//text()")[0].strip()
+            elif key.endswith("厂牌"):
+                attrs["publisher"] = et_value.xpath(".//text()")[0].strip()
+            elif key.endswith("导演"):
+                attrs["director"] = et_value.xpath(".//text()")[0].strip()
+
         title = et.xpath("//h1[@class='title is-4']/text()")[0]
+        casts = sorted(self.strip_all(et_info.xpath(".//a[@class='actress']/text()"), drop_empty_str=True))
 
         jav = JavInfo(
-            serial_no=serial_no,
+            serial_no=attrs["serial_no"],
             title=title,  # there is only Chinese title
             casts=casts,
-            publish_date=publish_date,
+            publish_date=attrs["publish_date"],
             thumbnail=None,
-            publisher=publisher,
-            director=director,
-            maker=brand,  # not sure if it's correct
+            publisher=attrs["publisher"].upper(),
+            maker=attrs["maker"].upper(),  # not sure if it's correct
+            director=attrs.get("director", ""),
+            source=self.source,
         )
         return jav

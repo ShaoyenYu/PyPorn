@@ -13,27 +13,29 @@ class MissAvApi(BaseApi):
     source = "MissAV"
     url_domain = "https://missav.com"
 
+    _lang = "cn"
+
     _keys = {
         "zh": {
             "serial_no": "番號",
             "title": "標題",
             "casts": "女優",
             "publish_date": "發行日期",
-            "publisher": "發行商",
+            "maker": "發行商",
         },
         "cn": {
             "serial_no": "番号",
             "title": "标题",
             "casts": "女优",
             "publish_date": "发行日期",
-            "publisher": "发行商",
+            "maker": "发行商",
         },
         "ja": {
             "serial_no": "品番",
             "title": "標題",
             "casts": "女優",
             "publish_date": "配信開始日",
-            "publisher": "メーカー",
+            "maker": "メーカー",
         },
     }
 
@@ -104,13 +106,17 @@ class MissAvApi(BaseApi):
 
         # this title will change accordingly with language
         title_gen = et.xpath("//div[@class='mt-4']/h1/text()")[0].replace("\u3000", " ")
-        casts = sorted(self.strip_all(tmp.get(self.keys["casts"], "").split(","), drop_empty_str=True))
+        if len(casts := self.strip_all(tmp.get(self.keys["casts"], "").split(", "), drop_empty_str=True)) > 0:
+            casts = (cast.split()[-1].strip("()") for cast in casts)
+            casts = self.strip_all(casts, drop_empty_str=True)
 
         jav = JavInfo(
             serial_no=tmp[self.keys["serial_no"]],
             title=tmp.get(self.keys["title"], title_gen),  # FC2 prefer to use the title
-            casts=casts,
+            casts=sorted(casts),
             publish_date=tmp[self.keys["publish_date"]],
             thumbnail=(await self.get_video_screenshot(serial_no_reg)) if with_thumbnail else None,
+            maker=tmp.get(self.keys["maker"], "").upper(),
+            source=self.source,
         )
         return jav
