@@ -47,16 +47,19 @@ class FC2Api(BaseApi):
             return None
 
         et = etree.HTML(resp.text)
-        et_header = et.xpath("//div[@class='items_article_headerInfo']")[0]
+        if len(res := et.xpath("//div[@class='items_article_headerInfo']")) == 0:
+            return None
+
+        et_header = res[0]
         title = et_header.xpath("./h3/text()")[-1]  # sometimes there is also a tag
         publisher = et_header.xpath("./ul//@href")[-1].strip("/").split("/")[-1]
         publish_date = et_header.xpath(".//div[@class='items_article_Releasedate']//text()")[0].split(" : ")[-1]
         publish_date = publish_date.replace("/", "-")
 
         url_image = et.xpath("//div[@class='items_article_MainitemThumb']//img/@src")[0]
-        hours, minutes, seconds = et.xpath("//div[@class='items_article_MainitemThumb']//text()")[0].split(":")
-        length = int(hours) * 3600 + int(minutes) * 60 + int(seconds)
-        thumbnail = await self._make_request_image(f"https:{url_image}")
+        times = [int(x) for x in et.xpath("//div[@class='items_article_MainitemThumb']//text()")[0].split(":")][::-1]
+        length = sum((unit * v) for unit, v in zip(times, (1, 60, 3600), strict=False))
+        thumbnail = await self._make_request_image(f"https:{url_image}") if with_thumbnail else None
 
         jav = JavInfo(
             serial_no=serial_no_reg,
