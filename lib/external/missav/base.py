@@ -13,7 +13,7 @@ class MissAvApi(BaseApi):
     source = "MissAV"
     url_domain = "https://missav.com"
 
-    _lang = "cn"
+    _lang = "ja"
 
     _keys = {
         "zh": {
@@ -55,8 +55,7 @@ class MissAvApi(BaseApi):
         """
 
         url = f"https://eightcha.com/{serial_no_reg.lower()}/cover.jpg"
-        resp = await self._make_request(url)
-        return Image.open(BytesIO(resp.content))
+        return await self._make_request_image(url)
 
     async def search_by_keyword(self, keyword, page_no=1) -> List[JavRecord]:
         url = f"{self.url_domain_lang}/search/{keyword}?page={page_no}"

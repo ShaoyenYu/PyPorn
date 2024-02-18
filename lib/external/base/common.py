@@ -2,10 +2,11 @@ import datetime as dt
 import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from io import BytesIO
 from typing import Optional, List, Tuple, Iterable
 
 import httpx
-from PIL.Image import Image
+from PIL.Image import Image, open as image_open
 
 __all__ = ["BaseApi", "BaseClient", "JavInfo", "JavRecord", "SerialNoParser"]
 
@@ -35,14 +36,14 @@ class JavInfo:
     ):
         self.serial_no = serial_no
         self._serial_no_reg = None
-        self._title, self._title_original = None, title
-        self.casts = casts
-        self.publish_date = publish_date
+        self._title, self._title_original = None, (title or "")
+        self.casts = casts or []
+        self.publish_date = publish_date or ""
         self.thumbnail = thumbnail
-        self.length = length
-        self.maker = maker
-        self.publisher = publisher
-        self.director = director
+        self.length = length or 0
+        self.maker = maker or ""
+        self.publisher = publisher or ""
+        self.director = director or ""
         self.source = source
 
     @property
@@ -103,9 +104,12 @@ class BaseApi(ABC):
             return [x_strip for x in strings if (x_strip := x.strip()) != ""]
         return [x.strip() for x in strings]
 
-    def _make_request(self, url: str, **kwargs):
-        resp = self.session.get(url, **kwargs)
-        return resp
+    async def _make_request(self, url: str, **kwargs):
+        return await self.session.get(url, **kwargs)
+
+    async def _make_request_image(self, url: str, **kwargs) -> Image:
+        resp = await self._make_request(url, **kwargs)
+        return image_open(BytesIO(resp.content))
 
     @abstractmethod
     def search_by_keyword(self, keyword: str) -> List[JavRecord]:
@@ -149,6 +153,7 @@ class SerialNoParser:
         f"FC",
     ))
     patt_fc2 = re.compile(f"({prefixes_fc2}){split_possible}({serial_no_fc2})")
+    patt_fc2_less = re.compile(f"(?<![\d])({serial_no_fc2})(?![\d])")
 
     # 02. Censored
     serial_prefix_censored = "[A-Z]{3,5}"
@@ -210,12 +215,11 @@ class SerialNoParser:
     @classmethod
     def _parse_serial_no_fc2(cls, serial_no: str, extend_fc2_from_no: bool = False) -> Optional[str]:
         prefix, number = cls._parse_by_pattern(serial_no, cls.patt_fc2)
-
         if number is not None:
             return f"FC2-PPV-{number}" if prefix is not None else None
 
-        if extend_fc2_from_no and (6 <= len(serial_no) <= 7) and serial_no.isnumeric():
-            return f"FC2-PPV-{serial_no}"
+        if extend_fc2_from_no and (matched := cls.patt_fc2_less.search(serial_no)) is not None:
+            return f"FC2-PPV-{matched.group()}"
         return None
 
 

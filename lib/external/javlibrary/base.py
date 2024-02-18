@@ -70,7 +70,9 @@ class JavLibraryApi(BaseApi):
             return None
 
         record = records[0]
-        assert record.keyword == serial_no_reg, f"Not Found {serial_no_reg}"
+        if record.keyword != serial_no_reg:
+            return None
+
         resp_video_detail = await self._get_video_detail(record.url)
 
         root = etree.HTML(resp_video_detail.text)
@@ -94,9 +96,7 @@ class JavLibraryApi(BaseApi):
         url_thumbnail = root.xpath(".//img[@id='video_jacket_img']/@src")[0]
         if not url_thumbnail.startswith("https:"):
             url_thumbnail = f"https:{url_thumbnail}"
-        thumbnail = Image.open(BytesIO(
-            (await self._make_request(url_thumbnail)).content
-        )) if with_thumbnail else None
+        thumbnail = await self._make_request_image(url_thumbnail) if with_thumbnail else None
 
         jav = JavInfo(
             serial_no=attrs["video_id"],
