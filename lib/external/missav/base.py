@@ -41,18 +41,18 @@ class MissAvApi(BaseApi):
     def keys(self):
         return self._keys[self.lang]
 
-    async def get_video_screenshot(self, serial_no: str) -> Image.Image:
+    async def get_video_screenshot(self, serial_no_reg: str) -> Image.Image:
         """
 
         Args:
-            serial_no: str
-                serial number string. e.g. "FC2-PPV-3076281"
+            serial_no_reg: str
+                regularized serial number. e.g. "FC2-PPV-3076281"
 
         Returns:
 
         """
 
-        url = f"https://eightcha.com/{serial_no.lower()}/cover.jpg"
+        url = f"https://eightcha.com/{serial_no_reg.lower()}/cover.jpg"
         resp = await self._make_request(url)
         return Image.open(BytesIO(resp.content))
 
@@ -74,6 +74,24 @@ class MissAvApi(BaseApi):
         return records
 
     async def get_video_detail(self, serial_no_reg: str, with_thumbnail=False) -> Optional[JavInfo]:
+        """
+        Fetch meta info of JAV, supported fields:
+            - serial_no
+            - title
+            - casts
+            - publish_date
+            - thumbnail
+
+        Args:
+            serial_no_reg: str
+                regularized serial number
+            with_thumbnail: bool
+                whether to download thumbnail of cover
+
+        Returns:
+
+        """
+
         url_video_detail = f"{self.url_domain_lang}/{serial_no_reg}"
         resp = await self._make_request(url_video_detail, follow_redirects=True)
         if resp.status_code == 404:

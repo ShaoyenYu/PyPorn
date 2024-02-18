@@ -44,6 +44,27 @@ class JavLibraryApi(BaseApi):
         return res
 
     async def get_video_detail(self, serial_no_reg, with_thumbnail=False) -> Optional[JavInfo]:
+        """
+        Fetch meta info of JAV, supported fields:
+            - serial_no
+            - title
+            - casts
+            - publish_date
+            - thumbnail
+            - length
+            - maker
+            - publisher
+
+        Args:
+            serial_no_reg: str
+                regularized serial number
+            with_thumbnail: bool
+                whether to download thumbnail of cover
+
+        Returns:
+
+        """
+
         if len(records := await self.search_by_keyword(serial_no_reg)) == 0:
             return None
 

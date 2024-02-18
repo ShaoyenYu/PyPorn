@@ -21,6 +21,7 @@ class TokyoLibApi(BaseApi):
         Returns:
 
         """
+
         if search_type == "actress":
             raise NotImplementedError()
 
@@ -37,7 +38,26 @@ class TokyoLibApi(BaseApi):
         ]
         return records
 
-    async def get_video_detail(self, serial_no_reg: str, with_thumbnail=False) -> Optional[JavInfo]:
+    async def get_video_detail(self, serial_no_reg: str) -> Optional[JavInfo]:
+        """
+        Fetch meta info of JAV, supported fields:
+            - serial_no
+            - title
+            - casts
+            - publish_date
+            - thumbnail
+            - publisher
+            - director
+            - maker
+
+        Args:
+            serial_no_reg: str
+                regularized serial number
+
+        Returns:
+
+        """
+
         if len(records := await self.search_by_keyword(serial_no_reg)) == 0:
             return None
 
